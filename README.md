@@ -29,5 +29,6 @@ maven은 중앙( central )에서 라이브러리를 받아오는데, 잘못 받�
         <servlet-name>spring</servlet-name>
         <url-pattern>/</url-pattern>
 </servlet-mapping>
+```
 
 ![img](./mdimg/img1.daumcdn.png)
