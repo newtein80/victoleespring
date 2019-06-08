@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
+import com.victoleespring.exception.GlobalExceptionHandler;
 import com.victoleespring.exception.GuestbookException;
 import com.victoleespring.vo.GuestBookVO;
 
@@ -83,7 +84,8 @@ public class GuestBookDAO {
 			result = (count == 1);
 		} catch (SQLException e) {
 			//e.printStackTrace();
-			throw new GuestbookException();
+			//throw new GuestbookException();
+			throw new GlobalExceptionHandler();
 		}
 		return result;
 	}

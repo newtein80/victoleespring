@@ -435,6 +435,95 @@ public boolean insert(GuestBookVO vo) {
 
 즉 DAO의 모든 메서드마다 로그를 남기고, 에러 페이지를 보여주는 일관된 과정을 GuestbookException으로 예외를 던지면 GuestbookException에서 모든 예외를 처리할 수 있습니다.
 
+#### Global Exception
+그런데 위의 예외 처리도 문제가 있습니다.
+모든 컨트롤러 마다 @ExceptionHandler 어노테이션이 붙은 메서드를 작성해야 한다는 것이죠.
+코드의 중복은 피하는 것이 좋기 때문에 이를 해결하려고 합니다.
+이 방법은 Controller 마다 예외를 처리할 필요 없이 **예외를 처리하는 클래스에 `@ControllerAdvice` 어노테이션을 작성하면 글로벌하게 예외를 처리할 수 있습니다.**
+
+###### GlobalExceptionHandler
+```java
+@ControllerAdvice
+public class GlobalExceptionHandler extends RuntimeException {
+	
+	// 모든 예외 처리
+	@ExceptionHandler(Exception.class)
+	// 기술침투는 하지 않는 것이 좋지만 뷰 페이지로 돌려야 하기 때문에 어쩔 수 없이 HttpServlet 객체를 사용 
+	public void handlerException(HttpServletRequest request, HttpServletResponse response,
+									Exception e) throws Exception{
+		// 1. 로깅
+		// 로그는 파일로 남겨야 하지만 지금은 jsp페이지로 보내기로 하자
+		StringWriter error = new StringWriter();
+		e.printStackTrace(new PrintWriter(error));
+		request.setAttribute("error", error);
+		
+		// 2. 에러페이지
+		// 컨트롤러가 아니기 때문에 뷰 페이지의 full path를 작성해야 함
+		request.getRequestDispatcher("/WEB-INF/views/error/error.jsp").forward(request, response);
+	}
+}
+```
+
+로깅 과정은 로그를 남기는 과정을 흉내 낸 것입니다.
+실제로는 logback 라이브러리를 통해 로그 파일로 로그를 기록하는 것이 좋습니다.
+그리고 클라이언트에게 보여줄 에러 페이지를 반환합니다.
+
+DAO객체에서 예외가 발생하므로 미리 `Root Application Context`에 **GlobalExceptionHandler 객체가 저장**되어 있어야 합니다.
+따라서 **@ControllerAdvice 어노테이션을 스캔 할 수 있도록 applicationContext.xml을 수정**
+
+###### applicationContext.xml
+```xml
+<context:annotation-config />
+<context:component-scan
+        base-package="com.victoleespring.repository, com.victoleespring.guestbook.exception">
+        <context:include-filter type="annotation"
+                expression="org.springframework.stereotype.Repository" />
+        <context:include-filter type="annotation"
+                expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation"
+                expression="org.springframework.stereotype.Component" />
+</context:component-scan>
+```
+GlobalExceptionHandler 클래스는 com.victolee.guestbook.exception 패키지에 있으므로 어노테이션을 스캐닝 하는 base-package에 추가했습니다.
+
+그러면 GlobalExceptionHandler 클래스의 @ControllerAdvice 어노테이션을 읽어 들이고, 이 클래스는 예외 처리를 하는 클래스로 인식하게 됩니다.
+
+###### GuestBookDAO
+```java
+// 게시글을 등록하는 메서드
+public boolean insert(GuestBookVO vo) {
+        boolean result = false;
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+                conn = getConnection();
+
+                //String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, '2019-06-08' )";
+                String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, (SELECT SYSDATE()) )";
+                pstmt = conn.prepareStatement(sql);
+
+                pstmt.setString(1, vo.getName());
+                pstmt.setString(2, vo.getPwd());
+                pstmt.setString(3, vo.getContent());
+                int count = pstmt.executeUpdate();
+
+                result = (count == 1);
+        } catch (SQLException e) {
+                //e.printStackTrace();
+                //throw new GuestbookException();
+                throw new GlobalExceptionHandler();
+        }
+        return result;
+}
+```
+이상으로 스프링에서 예외를 처리하는 방법에 대해 알아보았습니다.
+
+DAO에서 발생한 예외는 DAO에서 직접 처리하는 것이 좋은데, 매 번 똑같은 코드를 DAO의 모든 메서드 마다 작성하는 것은 좋지 않으므로 한 곳에서 예외를 처리할 수 있도록 GlobalExceptionHandler 클래스를 작성했습니다.
+GlobalExceptionHandler 클래스에서는 로그를 남기고 에러 페이지를 반환하는 역할을 합니다.
+모든 예외는 로그를 남기고, 에러 페이지를 렌더링 하는 과정을 수행하기 때문이죠.
+이제 코드의 중복 없이 예외를 처리할 수 있게 되었습니다.
+
 ---
 # 20180317.01
 

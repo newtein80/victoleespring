@@ -7,6 +7,6 @@
 <title>ERROR</title>
 </head>
 <body>
-	This is ErrorPage !!!
+	${ error }
 </body>
 </html>
