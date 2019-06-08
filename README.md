@@ -366,6 +366,76 @@ public String list(Model model) {
 ```
 
 ---
+# 20180325.03
+
+#### 예외처리 (ExceptionHandler)
+
+#### 효율적인 예외 처리
+DB에 접근하는 DAO 객체의 메서드에서 **SQL Exception**이 발생할 수 있습니다.
+그래서 DAO를 깔끔하게 처리 하기 위해 자신이 예외를 처리하지 않고, 예외 던지기 throws를 한다면,
+3 - layer에서 **DAO와 연결되어 있는 service 계층에서 SQL Exception을 처리**해야 합니다.
+
+![img](./mdimg/10.png)
+
+그런데 비즈니스 로직을 처리하는 계층인 service입장에서 SQL은 기술적인 부분입니다.
+service는 "유저가 없다"는 예외 같이 비즈니스와 관련된, 자신에게 의미 있는 예외만 받는 것이 좋습니다.
+service 입장에서 SQL이 작동하든 말든 관심이 없습니다.
+이것이 논리적으로 layer를 나눈 이유이기도 하고요.
+
+그래서 SQL Exception이 발생하면 DAO에서 직접 처리해야 할 것입니다.
+그런데 예외 처리는 증괄호가 많기 때문에 가독성을 매우 떨어뜨립니다.
+게다가 예외 처리 과정도 다음과 같이 일관됩니다.
+1) 예외에 대한 로그를 남긴다.
+2) 클라이언트에게 에러 페이지 보여준다.
+
+이에 따라 DAO에서 예외가 발생했을 경우 예외 처리 과정을 한 곳에서 처리하도록 하도록 하려고 합니다.
+즉 **exception이 발생하면 throws로 예외 던지기를 하지 말고 전환을 통해 한 곳에서 예외 처리**를 하도록 할 것입니다.
+
+#### 예외를 처리하는 클래스 생성
+```java
+public class GuestbookExcpetion extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public GuestbookExcpetion() {
+                super("GuestBookDAOException Occurs");
+        }
+
+        public GuestbookExcpetion(String msg) {
+                super(msg);
+        }
+}
+```
+
+```java
+// 게시글을 등록하는 메서드
+public boolean insert(GuestBookVO vo) {
+        boolean result = false;
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+                conn = getConnection();
+
+                String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, '2019-06-08' )";
+                pstmt = conn.prepareStatement(sql);
+
+                pstmt.setString(1, vo.getName());
+                pstmt.setString(2, vo.getPwd());
+                pstmt.setString(3, vo.getContent());
+                int count = pstmt.executeUpdate();
+
+                result = (count == 1);
+        } catch (SQLException e) {
+                //e.printStackTrace();
+                throw new GuestbookException();
+        }
+        return result;
+}
+```
+
+즉 DAO의 모든 메서드마다 로그를 남기고, 에러 페이지를 보여주는 일관된 과정을 GuestbookException으로 예외를 던지면 GuestbookException에서 모든 예외를 처리할 수 있습니다.
+
+---
 # 20180317.01
 
 #### TOMCAT

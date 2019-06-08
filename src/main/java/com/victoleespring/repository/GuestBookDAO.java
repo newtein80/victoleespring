@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
+import com.victoleespring.exception.GuestbookException;
 import com.victoleespring.vo.GuestBookVO;
 
 @Repository
@@ -70,7 +71,8 @@ public class GuestBookDAO {
 		try {
 			conn = getConnection();
 
-			String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, '2019-06-08' )";
+			//String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, '2019-06-08' )";
+			String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, (SELECT SYSDATE()) )";
 			pstmt = conn.prepareStatement(sql);
 
 			pstmt.setString(1, vo.getName());
@@ -80,7 +82,8 @@ public class GuestBookDAO {
 
 			result = (count == 1);
 		} catch (SQLException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
+			throw new GuestbookException();
 		}
 		return result;
 	}
