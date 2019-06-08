@@ -310,6 +310,62 @@ spring-servlet.xml 에 아래의 코드를 추가
 ```
 
 ---
+# 20180325.02
+
+#### ViewResolver
+ViewResolver는 어떻게 뷰 페이지가 렌더링 되는지를 해결해줍니다.
+컨트롤러에서 return으로 응답할 뷰 페이지의 경로를 문자열로 작성하면 클라이언트로 해당 JSP가 렌더링 되었습니다.
+```java
+@RequestMapping("/list")
+public String list(Model model) {
+        List<GuestBookVO> list = guestBookDAO.getList();
+        model.addAttribute("list", list);
+        return "/WEB-INF/views/guestbook/list.jsp";
+}
+```
+![img](./mdimg/08.png)
+
+요청이 오면 DispatcherServlet은 HTTP 요청에 따라 doGet() 메서드가 실행이 될 것입니다.
+이 때 클라이언트로 응답할 문서를 보내는 과정은 다음과 같습니다.
+1) 메서드가 **반환하는 문자열**을 파악한 후 **해당 경로의 View 객체**를 **ViewResolver**로부터 얻습니다.
+2) JSP 파일에서 사용해야 하는 데이터가 있다면 **Model 객체로 부터 데이터를 가져와 View 객체에 추가**합니다.
+
+즉 **ViewResolver는 View 객체를 반환하는 역할**을 합니다.
+데이터를 추가하고 렌더링하는 과정은 DispatcherServler의 doGet() 메서드에서 일어나죠.
+
+#### ViewResolver 설정
+지금까지 ViewResovler에 관련된 설정을 하지 않았는데도 정상적으로 응답이 되었습니다.
+그 이유는 기본 값으로 ViewResolver가 등록되어 있기 때문입니다.
+
+InternalResourceViewResolver 객체는 Default ViewResolver이며, JSP를 뷰로 사용할 때 쓰입니다.
+이로 미루어 보아 더 많은 ViewResolver가 있다는 것을 알 수 있는데, 가장 많이 사용되는 것이 InternalResourceViewResolver 이므로 이에 대한 설정을 해보도록 하겠습니다.
+
+```xml
+<!-- JSTL view -->
+
+<bean id='viewResolver' class='org.springframework.web.servlet.view.InternalResourceViewResolver'>
+        <property name='viewClass' value='org.springframework.web.servlet.view.JstlView' />
+        <property name='prefix' value='/WEB-INF/views/' />
+        <property name='suffix' value='.jsp' />
+        <property name='order' value='1' />
+</bean>
+```
+bean을 직접 등록하는 코드입니다.
+**viewResolver** 라는 이름의 bean은 실제로 **InternalResourceViewResolver 클래스**이며,
+**viewClass**로는 JSTLView를 사용하고,
+**prefix**(경로의 앞 부분)는 /WEB-INF/views/ ,
+**suffix**(경로의 뒷 부분)은 .jsp 을 의미합니다.
+
+```java
+@RequestMapping("/list")
+public String list(Model model) {
+        List<GuestBookVO> list = guestBookDAO.getList();
+        model.addAttribute("list", list);
+        return "/guestbook/list";
+}
+```
+
+---
 # 20180317.01
 
 #### TOMCAT
@@ -405,6 +461,7 @@ MVC 모델은 소프트웨어 공학에서 사용되는 소프트웨어 디자�
         B. 어떤 페이지를 사용자에게 보여줄지 렌더링을 해서 데이터와 함께 HTML문서를 응답합니다.
 
 이 과정을 그림으로 표현하면 아래와 같습니다.
+
 ![img](./mdimg/05.jpg)
 
 MVC 패턴을 사용하는 목적은 View와 Model사이에 Controller를 두어 View와 Model의 의존성을 없애기 위함입니다.

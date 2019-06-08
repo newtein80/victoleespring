@@ -23,12 +23,12 @@ public class GuestBookController {
 	public String list(Model model) {
 		List<GuestBookVO> list = guestBookDAO.getList();
 		model.addAttribute("list", list);
-		return "/WEB-INF/views/guestbook/list.jsp";
+		return "/guestbook/list";
 	}
 	
 	@RequestMapping("/deleteform")
 	public String deleteform() {
-		return "/WEB-INF/views/guestbook/deleteform.jsp";
+		return "/guestbook/deleteform";
 	}
 	
 	@RequestMapping(value="/add", method=RequestMethod.POST)
