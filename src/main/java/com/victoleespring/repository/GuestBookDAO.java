@@ -20,8 +20,8 @@ public class GuestBookDAO {
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 
-			String url = "jdbc:mysql://localhost/test";
-			conn = DriverManager.getConnection(url, "test", "test");
+			String url = "jdbc:mysql://localhost/guestbooks?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+			conn = DriverManager.getConnection(url, "root", "#skdlf12");
 		} catch (ClassNotFoundException e) {
 			System.out.println(" 드라이버 로딩 실패 ");
 		}
@@ -70,7 +70,7 @@ public class GuestBookDAO {
 		try {
 			conn = getConnection();
 
-			String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, (SELECT SYSDATE()) )";
+			String sql = "INSERT INTO guestbook VALUES (null, ?, password(?), ?, '2019-06-08' )";
 			pstmt = conn.prepareStatement(sql);
 
 			pstmt.setString(1, vo.getName());

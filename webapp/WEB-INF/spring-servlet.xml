@@ -16,4 +16,7 @@ http://www.springframework.org/schema/context/spring-context.xsd">
 	<!-- 스캐닝 할 기준 패키지 -->
 	<context:component-scan
 		base-package="com.victoleespring.controller" />
+	<!-- 서블릿 컨테이너의 디폴트 서블릿 위임 핸들러 -->
+	<mvc:annotation-driven />
+	<mvc:default-servlet-handler />
 </beans>

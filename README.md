@@ -3,6 +3,7 @@ victolee spring blog 2018
 
 https://victorydntmd.tistory.com/
 
+---
 # 20180324.01
 
 메이븐 ( Maven )은 war 또는 jar 파일을 빌드( build ), 라이브러리 의존성( dependency ) 해결, 컴파일( compile ) , 배포 ( deploy ) 등을 해결해주는 도구
@@ -19,6 +20,7 @@ maven은 중앙( central )에서 라이브러리를 받아오는데, 잘못 받�
 -> maven
 -> Update project 를 클릭하여 라이브러리를 다시 가져올 수 있도록 refresh를 할 수 있습니다.
 
+---
 # 20180324.02
 
 #### DispatcherServlet
@@ -111,7 +113,7 @@ public class HelloController {
 </body>
 </html>
 ```
-
+---
 # 20180324.03
 
 #### 톰캣 버튼을 실행했을 때 일어나는 동작
@@ -271,3 +273,184 @@ Root Application Context , Application Context 안에 들어 있는 객체는 Th
 Thread safe하기 위해서는 객체에 인스턴스 변수가 없으면 됩니다.
 나중에 코드를 보시면 아시겠지만 DAO , Controller는 외부에서 접근 가능한 멤버 변수가 없었습니다.
 그러나 VO는 getter , setter로 멤버 변수 조작이 가능
+
+---
+# 20180325.01
+
+#### Default Servlet Handler
+톰캣은 클라이언트의 요청 URL을 보고 Servlet Mapping에 따라 URL에 매핑된 Servlet이 처리를 하는 구조
+그리고 URL에 매핑되는 Servlet이 없다면, 예를들어 CSS, image 파일 같은 정적자원들은 defaultSevlet이 처리하도록 되어 있습니다.
+
+즉 CSS , image 파일들은 서버 외부에서 직접 접근 할 수 없는 /WEB-INF/assets 폴더 아래에 위치하는 것이 일반적
+
+CSS , image 파일에 접근하기 위한 Servlet Mapping을 하지 않았으면 톰캣이 defaultServlet으로 처리하여 정적 파일에 접근을 합니다.
+일반적으로 정적 파일에 대해 Servlet Mapping을 하지 않죠.
+스프링에서는 DispatcherServlet이 모든 요청을 받아 들인 후 Handler mapping table에 따라 컨트롤러로 분기 한다고 했었습니다.
+그렇기 때문에 DispatcherServlet은 정적 파일에 대해 톰캣이 defaultServlet으로 실행할 수 있는 기회를 뺏어갑니다.
+모든 요청은 일단 DispatcherServlet에서 처리해버리기 때문이죠.
+정적 자원에 접근하기 위한 경로 설정을 JSP/Servlet과 똑같이 해도 스프링에서는 경로를 읽지 못합니다.
+
+JSP/Servlet에서는 톰캣이 default Servlet이 있기 때문에 처리가 가능하지만,
+스프링에서는 Dispatcher Servlet이 모든 요청을 받아들이기 때문에 톰캣의 default Servlet이 정적 파일을 처리할 수 있는 기회를 잃게 됩니다.
+
+#### 환경설정
+spring-servlet.xml 에 아래의 코드를 추가
+```xml
+<!-- 서블릿 컨테이너의 디폴트 서블릿 위임 핸들러 -->
+<mvc:annotation-driven />
+<mvc:default-servlet-handler />
+```
+이 코드는 만약 Handler Mapping에 해당하는 URL이 없으면 default-servlet으로 처리하겠다는 의미입니다.
+
+즉 매핑이 되지 않은 URL은 webapp폴더를 시작으로 경로를 찾아가게 되고, 여기에서도 해당 경로의 자원이 존재하지 않으면 404 Not found가 발생합니다.
+
+#### 컨텍스트 경로
+```html
+<img src="${pageContext.servletContext.contextPath}/assets/images/1.jpg">
+```
+
+---
+# 20180317.01
+
+#### TOMCAT
+톰캣은 아파치( Apache )에서 java 언어로 만든 WAS입니다.
+
+톰캣을 Servlet Container 또는 Servlet Engine 이라고도 하는데, 톰캣은 Servlet을 실행시키며, JSP 코드가 포함되어 있는 웹 페이지를 실행할 수 있도록 합니다.
+
+---
+# 20180318.01
+
+#### TOMCAT 과 web.xml
+톰캣은 Servlet Container, Servlet Engine으로써 Servlet을 실행하여 동작합니다.
+웹 프로젝트 폴더를 생성할 때 같이 생성한 web.xml 파일에는 클라이언트가 어떤 URL을 요청했을 때 어떤 Servlet 파일을 실행시킬 것인지를 매핑해놓은 파일입니다.
+톰캣은 web.xml에 매핑되어진 자바 파일을 Servlet으로 변환시키고, 그 Servlet을 실행하여 요청에 응답하게 됩니다.
+이 때 Servlet으로 변환되기 위해서는 개발자가 Servlet이라는 것을 명시해줘야 합니다.
+
+#### Servlet 의 기본 구조
+Servlet으로 변환되기 위해서는 기본적으로 다음의 구조를 만족해야 합니다.
+
+- 톰캣에서 만들어 놓은 HttpServlet 클래스를 상속
+- HTTP 요청 메서드인 Get방식과 Post 방식을 처리하기 위해 doGet()과 doPost()를 오버라이딩
+        - 매개변수로는 HttpServletReqeust, HttpServletResponse 클래스를 정의합니다.
+
+#### URL과 Serlvet 매핑 - web.xml
+톰캣은 web.xml 파일을 확인하여 Servlet 클래스를 매핑한 후, 이를 실행
+
+아래와 같이 xml을 작성하면, Servlet과 URL이 매핑됩니다.
+```xml
+<servlet>
+        <servlet-name>MappingTest</servlet-name>
+        <servlet-class>hello</servlet-class>
+</servlet>
+<servlet-mapping>
+        <servlet-name>MappingTest</servlet-name>
+        <url-pattern>/hello</url-pattern>
+</servlet-mapping>
+```
+* servlet-name
+        - `web.xml`에서 매핑을 구분하기 위한 이름
+        - `servlet`과 `servlet-mapping`의 `servlet-name`이 같은 것을 확인할 수 있습니다.
+* servlet-class
+        - Servlet 클래스 이름
+* url-pattern
+        - Serlvet에 대응하는 URL
+        - 루트 경로는 생략합니다.
+
+#### Request / Response
+doGet(), doPost() 메서드는 HTTP 요청을 처리하는 메서드
+그리고 각 메서드는 HttpServletRequest , HttpServletResponse 두 객체를 파라미터로 명시
+이 두 객체는 톰캣에서 미리 작성해둔 클래스이며, HTTP 요청과 응답에 대한 정보들을 모두 갖고 있습니다.
+
+이들을 간단하게 request , response 객체라고 말하도록 하겠습니다.
+
+* request 객체
+클라이언트가 요청할 때 함께 전송한 데이터들이 있습니다.
+예를 들어, URL 파라미터, form에서 전송한 데이터들이 있습니다.
+* response 객체
+서버에서 클라이언트로 응답 할 때 필요한 데이터들이 있습니다.
+예를 들어, 응답 결과 상태 코드, 클라이언트가 요청한 HTML 문서 같은 것들이 있습니다.
+이 두 객체가 하는 일은 앞으로도 계속 나오게 되므로 API는 그 때 그 때 확인하도록 하겠습니다.
+
+> request , response 객체가 HTTP 요청과 응답을 처리하는 객체
+
+#### Servlet 객체로 응답하기 - JSP가 필요한 이유
+Servlet은 클라이언트의 요청을 받아서 비즈니스 로직 처리, DB에 접근 등의 요청을 처리한 후, 다시 사용자에게 응답하는 것이 주 역할입니다.
+즉, 요청을 관리한다는 점에서 MVC 패턴의 컨트롤러 역할을 합니다.
+
+Servlet으로 응답 페이지를 보여주는 것은 비효율적입니다.
+그래서 HTML 문서에 Java 코드를 넣을 수 있는 JSP가 필요한 것입니다.
+
+JSP는 MVC 패턴에서 View에 해당합니다.
+
+정리하면 **JSP/Servlet을 사용한다는 것은 "모든 요청은 Servlet으로 받고 클라이언트에게 보여 줄 페이지는 JSP로 작성한다"고 할 수 있습니다.**
+
+# MVC, MVP, MVVM
+#### MVC( Model - View - Controller ) 패턴
+MVC 모델은 소프트웨어 공학에서 사용되는 소프트웨어 디자인 패턴입니다.
+
+- Model
+모델은 애플리케이션의 데이터를 의미하며, Database의 데이터를 조작하는 layer입니다.
+- View
+뷰는 사용자에게 보여지는 인터페이스를 의미하며, 웹에서는 HTML문서라고 생각하시면 됩니다.
+- Controller
+컨트롤러는 데이터(model)와 인터페이스(View)간의 상호 동작을 관리합니다.
+즉, Model에 명령을 보내 데이터의 상태를 바꾸고, 어떤 화면을 사용자에게 보여줄지 View에 명령을 합니다.
+
+사용자가 애플리케이션에 어떤 요청을 하는 순간부터 서버가 응답을 하기까지의 흐름은 다음과 같습니다.
+
+1. 브라우저가 페이지를 조회하기 위해 url을 입력하거나 링크를 클릭합니다. ( 요청을 보냄 )
+2. 라우터에서 url을 받아 적절한 Controller로 연결시킵니다.
+3. Controller에서는 응답을 보내기 위한 로직을 처리합니다.
+        A. 데이터가 필요하다면 Model에서 데이터를 조회합니다. ( 쿼리를 통해 DB에서 데이터 조회 )
+        B. 어떤 페이지를 사용자에게 보여줄지 렌더링을 해서 데이터와 함께 HTML문서를 응답합니다.
+
+이 과정을 그림으로 표현하면 아래와 같습니다.
+![img](./mdimg/05.jpg)
+
+MVC 패턴을 사용하는 목적은 View와 Model사이에 Controller를 두어 View와 Model의 의존성을 없애기 위함입니다.
+훌륭한 설계란 인터페이스 간의 의존성(Dependency)를 제거하는것에 있습니다.
+MVC 패턴은 이러한 의존성을 제거하기 위해 고안된 디자인 패턴입니다.
+그러나 실제로는 View에서 Model을 이용하기 때문 View와 Model은 의존적입니다.
+즉, Model이 업데이트 되면 View도 업데이트가 됩니다.
+따라서 View와 Model의 의존성을 완벽하기 분리하기 위한 새로운 패턴이 등장했습니다.
+
+#### MVP( Model - View - Presenter ) 패턴
+MVP 모델은 MVC 모델의 Controller가 Presenter로 바뀐 것입니다.
+Preseneter는 View의 인스턴스를 갖고 있으며 View에서 요청이 발생하면 이벤트에 따른 Model의 상태를 변경시킵니다.
+즉, 철저하게 View와 Model를 분리시키고, View와 Model 사이에 다리 역할을 수행합니다.
+MVC 패턴에서는 사용자 입력이 컨트롤러로부터 왔습니다.
+대부분의 프레임워크에서 URL 요청을 받은 라우터는 컨트롤러로 연결됩니다.
+
+그러나 MVP 패턴은 사용자 입력이 View에서 발생합니다.
+쉽게 스마트폰을 생각하면 될 것 같습니다. ( 실제로 안드로이드 개발에 있어 MVP 패턴을 사용하곤 합니다. )
+View에서 요청이 발생하면 Presenter로 전달하고 Presenter에서는 그 이벤트에 따른 Model의 상태를 업데이트 시킵니다.
+Model이 업데이트 되면 Presenter에서는 그 결과를 다시 View에 전달하는 것이죠.
+따라서 MVP 패턴은 View와 Model 간의 의존성을 분리시켰습니다.
+그러나 View와 Presenter의 관계는 1 : 1이기 때문에 Presenter는 View와 의존성이 깊다고 할 수 있습니다.
+MVP패턴 역시 View와 Presenter간의 의존성이 깊기 때문에 이 문제를 해결하려 새로운 패턴이 등장합니다.
+
+#### MVVM ( Model - View - ViewModel ) 패턴
+MVVM 모델은 MVC 모델의 Controller , MVP 모델의 Presenter 대신 ViewModel로 바뀐 모델입니다.
+ViewModel은 View를 나타내기 위한 Model이라 이해하시면 됩니다.
+MVVM 모델은 MVP 모델과 같이 View에서 입력이 들어옵니다.
+입력이 들어오면 Command 패턴을 통해 ViewModel에 명령을 내리게 되고 ViewModel은 Model에게 필요한 데이터를 요청합니다.
+Model은 ViewModel에 필요한 데이터를 응답하고 Data Binding을 통해 ViewModel의 값이 변화하면 바로 View의 정보가 바뀌게 됩니다.
+즉, Command와 Data Binding을 통해 View의 의존성을 끊어버렸습니다.
+이로써 View와 Model의 분리가 이루어졌고, MVP 패턴의 문제점을 해결되었습니다.
+
+> https://magi82.github.io/android-mvc-mvp-mvvm/
+
+---
+# 20180318.02
+
+#### DAO ( Data Access Object ) / VO ( Value Object )
+
+* DAO
+  * DB 질의를 통해 데이터에 접근하는 객체
+  * DB의 한 테이블당 DAO 클래스를 하나씩 만들어 두면 유지보수가 쉬워집니다.
+    * 예를 들어, User, Post 라는 두 테이블이 있을 때, User 테이블의 데이터를 접근하고 싶다면 UserDAO 클래스를 만들고, 마차간지로 Post 테이블에 접근하고 싶다면 PostDAO 클래스를 만들어서 관리를 할 수 있습니다.
+
+* VO
+  * DB의 한 테이블에 존재하는 컬럼들을 멤버 변수로 작성하여, 테이블의 컬럼 값을 java에서 객체로 다루기 위해 사용합니다.
+  * 즉, 데이터들을 캡슐화 해서 객체로 만든 것입니다.
+    * 예를 들어 User 테이블에 id, name, phone 컬럼이 있다면, UserVO 클래스에는 id, name, phone 멤버 변수가 존재하고 이에 대한 접근은 getter, setter로 다룹니다.
